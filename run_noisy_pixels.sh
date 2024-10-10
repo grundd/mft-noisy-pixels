@@ -7,7 +7,7 @@
 # 1728424800 = 09/10/2024, 00:00:00 
 
 # UNIX timestamp (type long, second precision -> 10 digits):
-trg_start_min=1717192800 
-trg_start_max=1723672800
+trg_start_min=1717192800
+trg_start_max=1728424800
 
 root -q 'noisy_pixels.cxx('$trg_start_min','$trg_start_max')'

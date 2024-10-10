@@ -151,18 +151,13 @@ bool read_csv (string fname, long start_min = 0, long start_max = 2e9, bool verb
   return true; 
 }
 
-float margin_top = 0.07;
-float margin_right = 0.10;
-float margin_bottom = 0.10;
-float margin_left = 0.12;
-
 template<typename T>
 void set_canvas_for_h1 (T* c)
 {
-  c->SetTopMargin(margin_top);
-  c->SetBottomMargin(margin_bottom);
-  c->SetRightMargin(margin_right);
-  c->SetLeftMargin(margin_left);
+  c->SetTopMargin(0.07);
+  c->SetBottomMargin(0.1);
+  c->SetRightMargin(0.02);
+  c->SetLeftMargin(0.12);
   return;
 }
 
@@ -207,7 +202,7 @@ void format_h1 (TH* h)
   h->GetYaxis()->SetTitleSize(0.035);
   h->GetYaxis()->SetTitleOffset(1.5);
   h->GetYaxis()->SetLabelSize(0.03);
-  h->GetYaxis()->SetRangeUser(7800, 9000);
+  //h->GetYaxis()->SetRangeUser(7800, 9000);
   return;
 }
 
@@ -216,7 +211,7 @@ void noisy_pix_correlation_with_delays ()
   TH2F* h2_true_total = new TH2F("", "", N_2d, &ax_sb_2d[0], N_2d, &ax_re_2d[0]);
   TH2I* h2_true_count = new TH2I("", "", N_2d, &ax_sb_2d[0], N_2d, &ax_re_2d[0]);
 
-  TH2F* h2_bins_total = new TH2F("", "#Noisy pixels (#color[4]{#runs})", N_2d, &ax_5bins[0], N_2d, &ax_5bins[0]);
+  TH2F* h2_bins_total = new TH2F("", Form("#Noisy pixels (#color[4]{#runs, total: %lu})", runs.size()), N_2d, &ax_5bins[0], N_2d, &ax_5bins[0]);
   TH2I* h2_bins_count = new TH2I("", "#Runs", N_2d, &ax_5bins[0], N_2d, &ax_5bins[0]);
 
   TH1F* h1_true_total_sb = new TH1F("", "", N_sb, &ax_sb_1d[0]);
@@ -276,7 +271,7 @@ void noisy_pix_correlation_with_delays ()
   for(int i = 1; i < N_sb; i++) h1_bins_total_sb->GetXaxis()->SetBinLabel(i, Form("[%.0f, %.0f)", ax_sb_1d[i-1], ax_sb_1d[i]));
   h1_bins_total_sb->GetXaxis()->SetBinLabel(N_sb, Form(">= %.0f", ax_sb_1d[N_sb-1]));
   h1_bins_total_sb->Draw("e0");
-  c2->Print(Form("%s/corr_SB_stop.pdf", folder_name.data()));
+  c2->Print(Form("%s/corr_sb_stop.pdf", folder_name.data()));
 
   TCanvas* c3 = new TCanvas("", "", 900, 700);
   set_canvas_for_h1(c3);
@@ -285,7 +280,7 @@ void noisy_pix_correlation_with_delays ()
   for(int i = 1; i < N_re; i++) h1_bins_total_re->GetXaxis()->SetBinLabel(i, Form("[%.0f, %.0f)", ax_re_1d[i-1], ax_re_1d[i]));
   h1_bins_total_re->GetXaxis()->SetBinLabel(N_re, Form(">= %.0f", ax_re_1d[N_re-1]));
   h1_bins_total_re->Draw("e0");
-  c3->Print(Form("%s/corr_last_GO_READY.pdf", folder_name.data()));
+  c3->Print(Form("%s/corr_last_go_ready.pdf", folder_name.data()));
 
   return;
 }
@@ -297,15 +292,22 @@ void noisy_pix_trend (float delay_sb_min = 0, float delay_sb_max = 1e4, float de
   TGraph* gr_trend_new = new TGraph();
   TGraph* gr_trend_disapp = new TGraph();
 
+  TF1 *f_total = new TF1("f", "[1]*x + [0]");
+
+  std::vector<int> run_numbers;
   for (auto r : runs) {
     float delay_sb = (r.ts_trg_start - r.ts_sb_stop) / 60; // in minutes
     float delay_re = (r.ts_trg_start - r.ts_go_ready) / 60; // in minutes
     if(delay_sb >= delay_sb_min && delay_sb < delay_sb_max && delay_re >= delay_re_min && delay_re < delay_re_max) {
-      gr_trend_total->AddPoint(r.run, r.noisy_total);
-      gr_trend_new->AddPoint(r.run, r.noisy_new);
-      gr_trend_disapp->AddPoint(r.run, r.noisy_disapp);
+      run_numbers.push_back(r.run);
+      gr_trend_total->AddPoint(r.ts_trg_start, r.noisy_total);
+      gr_trend_new->AddPoint(r.ts_trg_start, r.noisy_new);
+      gr_trend_disapp->AddPoint(r.ts_trg_start, r.noisy_disapp);
     }
   }
+
+  // fits
+  gr_trend_total->Fit(f_total);
 
   gr_trend_total->SetLineColor(kBlack);
   gr_trend_total->SetLineStyle(1);
@@ -328,24 +330,33 @@ void noisy_pix_trend (float delay_sb_min = 0, float delay_sb_max = 1e4, float de
   gr_trend_disapp->SetMarkerStyle(kFullTriangleUp);
   gr_trend_disapp->SetMarkerSize(0.8);
 
+  float margin_top = 0.02;
+  float margin_right = 0.10;
+  float margin_bottom = 0.15;
+  float margin_left = 0.12;
+
   TCanvas* c = new TCanvas("", "", 900, 700);
   c->cd();
   // first pad
   TPad* p1 = new TPad("", "", 0., 0., 1., 1.);
-  set_canvas_for_h1(p1);
+  p1->SetTopMargin(margin_top);
+  p1->SetBottomMargin(margin_bottom);
+  p1->SetRightMargin(margin_right);
+  p1->SetLeftMargin(margin_left);
   p1->Draw();
   p1->cd();
-  gr_trend_total->GetXaxis()->SetTitle("Run number");
-  gr_trend_total->GetXaxis()->SetTitleOffset(1.1);
   gr_trend_total->GetYaxis()->SetTitle("#Noisy pixels");
   gr_trend_total->GetYaxis()->SetTitleOffset(1.65);
   gr_trend_total->GetHistogram()->SetNdivisions(510, "X");
   gr_trend_total->GetXaxis()->SetMaxDigits(6);
-  float set_ymin = gr_trend_total->GetHistogram()->GetMinimum();
+  gr_trend_total->GetXaxis()->SetLabelSize(0);
+  gr_trend_total->GetXaxis()->SetTitleSize(0);
+  float set_ymin = gr_trend_total->GetHistogram()->GetMinimum() * 0.75;
   float set_ymax = gr_trend_total->GetHistogram()->GetMaximum();
   if (force_ymin > 0) set_ymin = force_ymin;
   if (force_ymax > 0) set_ymax = force_ymax;
-  gr_trend_total->GetYaxis()->SetRangeUser(set_ymin * 0.75, set_ymax);
+  float set_dy = (set_ymax - set_ymin) / (1. - margin_top - margin_bottom);
+  gr_trend_total->GetYaxis()->SetRangeUser(set_ymin, set_ymax);
   gr_trend_total->Draw("ALP");
   // font sizes and styles
   Style_t tfont = gr_trend_total->GetHistogram()->GetYaxis()->GetTitleFont();
@@ -357,13 +368,39 @@ void noisy_pix_trend (float delay_sb_min = 0, float delay_sb_max = 1e4, float de
   float xmax = gr_trend_total->GetXaxis()->GetXmax();
   float dx = (xmax - xmin) / (1. - margin_left - margin_right);
   float ymin = 0; 
-  float ymax_new = gr_trend_new->GetHistogram()->GetMaximum()*1.8;
-  float ymax_disapp = gr_trend_disapp->GetHistogram()->GetMaximum()*1.8;
+  float ymax_new = gr_trend_new->GetHistogram()->GetMaximum() * 1.8;
+  float ymax_disapp = gr_trend_disapp->GetHistogram()->GetMaximum() * 1.8;
   float ymax = ymax_new > ymax_disapp ? ymax_new : ymax_disapp;
   float dy = (ymax - ymin) / (1. - margin_top - margin_bottom);
+  // custom x-axis
+  double x_incr = (xmax - xmin) / 50;
+  double x, y;
+  TLatex *t;
+  double x_curr = 0;
+  for (int i = 0; i < gr_trend_total->GetN(); i++) {
+    gr_trend_total->GetPoint(i, x, y);
+    if (x > x_curr + x_incr) {
+      t = new TLatex(x, set_ymin - set_dy * margin_bottom / 3, Form("%i", run_numbers[i]));
+      t->SetTextSize(0.025);
+      t->SetTextFont(42);
+      t->SetTextAlign(22);
+      t->SetTextAngle(90);
+      t->Draw();
+      x_curr = x; 
+    }
+  }
+  // create the title
+  t = new TLatex(xmax + dx * margin_right / 2, set_ymin - set_dy * margin_bottom * 4/5, " Time (run numbers are shown)");
+  t->SetTextSize(tsize);
+  t->SetTextFont(42);
+  t->SetTextAlign(32);
+  t->Draw();
   // second pad
   TPad* p2 = new TPad("", "", 0., 0., 1., 1.);
-  set_canvas_for_h1(p2);
+  p2->SetTopMargin(margin_top);
+  p2->SetBottomMargin(margin_bottom);
+  p2->SetRightMargin(margin_right);
+  p2->SetLeftMargin(margin_left);
   p2->Range(xmin-margin_left*dx, ymin-margin_bottom*dy, xmax+margin_right*dx, ymax+margin_top*dy);
   p2->SetFillStyle(4000); // transparent
   p2->Draw();
@@ -384,15 +421,17 @@ void noisy_pix_trend (float delay_sb_min = 0, float delay_sb_max = 1e4, float de
   ax->SetLineColor(kBlue);
   ax->Draw();
   // legend
-  TLegend* l = new TLegend(0.15, 0.82, 0.45, 0.92);
-  l->AddEntry(gr_trend_total, "total", "LP");
+  TLegend* l = new TLegend(0.15, 0.83, 0.45, 0.97);
+  l->AddEntry(gr_trend_total, Form("total + fit: #it{f}(#it{x}) = %.1e + %.1e #it{x} ", f_total->GetParameter(0), f_total->GetParameter(1)), "LP");
   l->AddEntry(gr_trend_new, "new", "LP");
   l->AddEntry(gr_trend_disapp, "disappeared", "LP");
+  l->AddEntry((TObject*)0, Form("#runs: %i", gr_trend_total->GetN()), "");
   l->SetBorderSize(0);
   l->SetFillStyle(0);
+  l->SetTextSize(0.03);
   l->Draw();
-  c->Print(Form("%s/trend_SB(%.0f-%.0f)_READY(%.0f-%.0f).pdf", 
-    folder_name.data(), delay_sb_min, delay_sb_max, delay_re_min, delay_re_max));
+  c->Print(Form("%s/trend_ready(%.0f-%.0f)_sb(%.0f-%.0f).pdf", 
+    folder_name.data(), delay_re_min, delay_re_max, delay_sb_min, delay_sb_max));
 
   return;
 }
@@ -408,9 +447,9 @@ void noisy_pixels (long start_min, long start_max)
   if (true) {
     // time since last SB stop: min, max [minutes]
     // time since last GO_READY: min, max [minutes]
-    noisy_pix_trend(0, 1e4, 0, 1e4, 5400, 10800);
-    noisy_pix_trend(0, 10, 0, 1e4, 5400, 10800);
-    noisy_pix_trend(60, 1e4, 0, 10, 5400, 10800);
+    noisy_pix_trend(0, 1e4, 0, 1e4, 5400, 10400);
+    noisy_pix_trend(0, 20, 0, 1e4, 5400, 10400);
+    noisy_pix_trend(0, 1e4, 0, 10, 5400, 10400);
   }
   
   return;
