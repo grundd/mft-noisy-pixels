@@ -161,7 +161,7 @@ void compare_noise_maps (long ts_first, long ts_last)
   return;
 }
 
-void count_noisy_pixels ()
+void noisy_pixels_count ()
 {
   api.init("http://alice-ccdb.cern.ch");
 
