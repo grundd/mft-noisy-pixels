@@ -308,7 +308,7 @@ void noisy_pix_trend (std::vector<noise>* noise_runs, std::string plot_opt,
 void noisy_pixels_plots (long start_min, long start_max)
 {
   gStyle->SetOptStat(0);
-  std::vector<noise>* noise_runs = read_csv("noise_runs_input.csv", start_min, start_max);
+  std::vector<noise>* noise_runs = read_csv("input.csv", start_min, start_max);
 
   if(!noise_runs) {
     std::cout << "Noise run vector could not be loaded\n";

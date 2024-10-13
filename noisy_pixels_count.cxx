@@ -152,7 +152,7 @@ void compare_noise_maps (long ts_first, long ts_last)
   }
 
   // create and save the csv
-  ofstream csv("noisy_pixels.csv");
+  ofstream csv("input_noisy_pixs.csv");
   csv << "run,total,new,disapp\n";
   for (auto noise : noise_run_stats)
     csv << noise[0] << "," << noise[1] << "," << noise[2] << "," << noise[3] << "\n";
