@@ -311,9 +311,10 @@ void noisy_pix_trend (std::vector<noise>* noise_runs, std::string plot_opt,
   ax->Draw();
   // legend
   TLegend* l = new TLegend(0.15, 0.83, 0.45, 0.97);
-  l->AddEntry(gr_trend_total, Form("total + fit: #it{f}(#it{x}) = %.2e + %.2e #it{x} ", f_total->GetParameter(0), f_total->GetParameter(1)), "LP");
-  l->AddEntry(gr_trend_new, "new", "P");
-  l->AddEntry(gr_trend_disapp, "disappeared", "P");
+  l->AddEntry(gr_trend_total, Form("total + fit: #it{f}(#it{x}) = %.2e + %.2e #it{x} ", 
+    f_total->GetParameter(0), f_total->GetParameter(1)), plot_opt.data());
+  l->AddEntry(gr_trend_new, "new", plot_opt.data());
+  l->AddEntry(gr_trend_disapp, "disappeared", plot_opt.data());
   l->AddEntry((TObject*)0, Form("#runs: %i", gr_trend_total->GetN()), "");
   l->SetBorderSize(0);
   l->SetFillStyle(0);
