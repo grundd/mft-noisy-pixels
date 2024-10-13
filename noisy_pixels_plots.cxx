@@ -17,6 +17,9 @@
 // custom headers
 #include "utilities.h"
 
+bool first_execution(true);
+float xmin(-1), xmax(-1);
+
 template<typename TH>
 void format_histo (TH* h)
 {
@@ -34,6 +37,17 @@ void format_histo (TH* h)
   h->GetYaxis()->SetTitleSize(0.035);
   h->GetYaxis()->SetTitleOffset(1.5);
   h->GetYaxis()->SetLabelSize(0.03);
+  return;
+}
+
+void format_graph (TGraph* g, Color_t clr, Style_t lst, Style_t mrk)
+{
+  g->SetLineColor(clr);
+  g->SetLineStyle(lst);
+  g->SetLineWidth(1);
+  g->SetMarkerColor(clr);
+  g->SetMarkerStyle(mrk);
+  g->SetMarkerSize(0.8);
   return;
 }
 
@@ -123,7 +137,10 @@ void noisy_pix_correlation_with_delays (std::vector<noise>* noise_runs, std::str
   h2_bins_total->GetYaxis()->SetLabelSize(0.04);
   // z-axis
   h2_bins_total->GetZaxis()->SetLabelSize(0.03);
-  h2_bins_total->GetZaxis()->SetRangeUser(7500, 9000);
+  float max = h2_bins_total->GetMaximum();
+  float min = h2_bins_total->GetMinimum(0);
+  float margin = (max - min) * 0.07;
+  h2_bins_total->GetZaxis()->SetRangeUser(min - margin, max + margin);
   h2_bins_total->SetBarOffset(+0.08);
 
   // h2_count
@@ -158,7 +175,7 @@ void noisy_pix_correlation_with_delays (std::vector<noise>* noise_runs, std::str
 
 void noisy_pix_trend (std::vector<noise>* noise_runs, std::string plot_opt,
   std::tuple<float, float, float, float> delays = {0, 1e4, 0, 1e4}, // sb_min, sb_max, re_min, re_max
-  std::tuple<float, float> force_ranges = {-1, -1},
+  std::tuple<float, float, float, float> force_ranges = {-1, -1, -1, -1},
   std::string folder = "")
 {
   TGraph* gr_trend_total = new TGraph();
@@ -184,26 +201,9 @@ void noisy_pix_trend (std::vector<noise>* noise_runs, std::string plot_opt,
   // fits
   gr_trend_total->Fit(f_total);
 
-  gr_trend_total->SetLineColor(kBlack);
-  gr_trend_total->SetLineStyle(1);
-  gr_trend_total->SetLineWidth(1);
-  gr_trend_total->SetMarkerColor(kBlack);
-  gr_trend_total->SetMarkerStyle(kOpenCircle);
-  gr_trend_total->SetMarkerSize(0.8);
-
-  gr_trend_new->SetLineColor(kBlue);
-  gr_trend_new->SetLineStyle(1);
-  gr_trend_new->SetLineWidth(1);
-  gr_trend_new->SetMarkerColor(kBlue);
-  gr_trend_new->SetMarkerStyle(kOpenSquare);
-  gr_trend_new->SetMarkerSize(0.8);
-
-  gr_trend_disapp->SetLineColor(kBlue);
-  gr_trend_disapp->SetLineStyle(2);
-  gr_trend_disapp->SetLineWidth(1);
-  gr_trend_disapp->SetMarkerColor(kBlue);
-  gr_trend_disapp->SetMarkerStyle(kFullTriangleUp);
-  gr_trend_disapp->SetMarkerSize(0.8);
+  format_graph(gr_trend_total, kBlack, 1, kOpenCircle);
+  format_graph(gr_trend_new, kBlue, 1, kOpenSquare);
+  format_graph(gr_trend_disapp, kBlue, 2, kFullTriangleUp);
 
   float margin_t = 0.02;
   float margin_r = 0.10;
@@ -217,33 +217,37 @@ void noisy_pix_trend (std::vector<noise>* noise_runs, std::string plot_opt,
   set_margins(p1, margin_t, margin_r, margin_b, margin_l);
   p1->Draw();
   p1->cd();
-  gr_trend_total->GetYaxis()->SetTitle("#Noisy pixels");
-  gr_trend_total->GetYaxis()->SetTitleOffset(1.65);
-  gr_trend_total->GetHistogram()->SetNdivisions(510, "X");
-  gr_trend_total->GetXaxis()->SetMaxDigits(6);
+
+  // x-axis
+  if(first_execution) {
+    xmin = gr_trend_total->GetXaxis()->GetXmin();
+    xmax = gr_trend_total->GetXaxis()->GetXmax();
+  }
+  float dx = (xmax - xmin) / (1. - margin_l - margin_r);
   gr_trend_total->GetXaxis()->SetLabelSize(0);
   gr_trend_total->GetXaxis()->SetTitleSize(0);
-  float set_ymin = gr_trend_total->GetHistogram()->GetMinimum() * 0.75;
-  float set_ymax = gr_trend_total->GetHistogram()->GetMaximum();
-  if (std::get<0>(force_ranges) > 0) set_ymin = std::get<0>(force_ranges);
-  if (std::get<1>(force_ranges) > 0) set_ymax = std::get<1>(force_ranges);
-  float set_dy = (set_ymax - set_ymin) / (1. - margin_t - margin_b);
-  gr_trend_total->GetYaxis()->SetRangeUser(set_ymin, set_ymax);
+  gr_trend_total->GetXaxis()->SetTickSize(0);
+  TAxis *x_ax = gr_trend_total->GetXaxis();
+  x_ax->SetLimits(xmin, xmax);
+
+  // y-axis
+  float ymin = gr_trend_total->GetHistogram()->GetMinimum() * 0.75;
+  float ymax = gr_trend_total->GetHistogram()->GetMaximum() * 1.05;
+  if (std::get<0>(force_ranges) > 0) ymin = std::get<0>(force_ranges);
+  if (std::get<1>(force_ranges) > 0) ymax = std::get<1>(force_ranges);
+  float dy = (ymax - ymin) / (1. - margin_t - margin_b);
+  gr_trend_total->GetYaxis()->SetTitle("#Noisy pixels");
+  gr_trend_total->GetYaxis()->SetTitleOffset(1.65);
+  gr_trend_total->GetYaxis()->SetRangeUser(ymin, ymax);
+  
   gr_trend_total->Draw(Form("A%s", plot_opt.data()));
-  // font sizes and styles
+
+  // get font sizes and styles from gr_trend_total
   Style_t tfont = gr_trend_total->GetHistogram()->GetYaxis()->GetTitleFont();
   Style_t lfont = gr_trend_total->GetHistogram()->GetYaxis()->GetLabelFont();
   float tsize = gr_trend_total->GetHistogram()->GetYaxis()->GetTitleSize();
   float lsize = gr_trend_total->GetHistogram()->GetYaxis()->GetLabelSize();
-  // ranges
-  float xmin = gr_trend_total->GetXaxis()->GetXmin();
-  float xmax = gr_trend_total->GetXaxis()->GetXmax();
-  float dx = (xmax - xmin) / (1. - margin_l - margin_r);
-  float ymin = 0; 
-  float ymax_new = gr_trend_new->GetHistogram()->GetMaximum() * 1.8;
-  float ymax_disapp = gr_trend_disapp->GetHistogram()->GetMaximum() * 1.8;
-  float ymax = ymax_new > ymax_disapp ? ymax_new : ymax_disapp;
-  float dy = (ymax - ymin) / (1. - margin_t - margin_b);
+
   // custom x-axis
   double x_incr = (xmax - xmin) / 50;
   double x, y;
@@ -252,25 +256,41 @@ void noisy_pix_trend (std::vector<noise>* noise_runs, std::string plot_opt,
   for (int i = 0; i < gr_trend_total->GetN(); i++) {
     gr_trend_total->GetPoint(i, x, y);
     if (x > x_curr + x_incr) {
-      t = new TLatex(x, set_ymin - set_dy * margin_b / 3, Form("%i", run_numbers[i]));
+      // label
+      t = new TLatex(x, ymin - dy * margin_b / 3, Form("%i", run_numbers[i]));
       t->SetTextSize(0.025);
       t->SetTextFont(42);
       t->SetTextAlign(22);
       t->SetTextAngle(90);
       t->Draw();
-      x_curr = x; 
+      // tick
+      TLine* l = new TLine(x, ymin, x, ymin + (ymax - ymin) * 0.015);
+      l->Draw();
+
+      x_curr = x;  
     }
   }
+
   // create the title
-  t = new TLatex(xmax + dx * margin_r / 2, set_ymin - set_dy * margin_b * 4/5, " Time (run numbers are shown)");
+  t = new TLatex(xmax + dx * margin_r / 2, ymin - dy * margin_b * 4/5, " Time (run numbers are shown)");
   t->SetTextSize(tsize);
   t->SetTextFont(42);
   t->SetTextAlign(32);
   t->Draw();
+
+  // set ranges for gr_trend_new & gr_trend_disapp
+  float ymin2 = 0; 
+  float ymax_new = gr_trend_new->GetHistogram()->GetMaximum() * 1.8;
+  float ymax_disapp = gr_trend_disapp->GetHistogram()->GetMaximum() * 1.8;
+  float ymax2 = ymax_new > ymax_disapp ? ymax_new : ymax_disapp;
+  if (std::get<2>(force_ranges) > 0) ymin2 = std::get<2>(force_ranges);
+  if (std::get<3>(force_ranges) > 0) ymax2 = std::get<3>(force_ranges);  
+  float dy2 = (ymax2 - ymin2) / (1. - margin_t - margin_b);
+  
   // second pad
   TPad* p2 = new TPad("", "", 0., 0., 1., 1.);
   set_margins(p2, margin_t, margin_r, margin_b, margin_t);
-  p2->Range(xmin-margin_l*dx, ymin-margin_b*dy, xmax+margin_r*dx, ymax+margin_t*dy);
+  p2->Range(xmin-margin_l*dx, ymin2-margin_b*dy2, xmax+margin_r*dx, ymax2+margin_t*dy2);
   p2->SetFillStyle(4000); // transparent
   p2->Draw();
   p2->cd();
@@ -278,7 +298,7 @@ void noisy_pix_trend (std::vector<noise>* noise_runs, std::string plot_opt,
   gr_trend_new->Draw(Form("%s", plot_opt.data()));
   gr_trend_disapp->Draw(Form("%s SAME", plot_opt.data()));
   // right axis
-  TGaxis *ax = new TGaxis(xmax, ymin, xmax, ymax, ymin, ymax, 510, "+L");
+  TGaxis *ax = new TGaxis(xmax, ymin2, xmax, ymax2, ymin2, ymax2, 510, "+L");
   ax->SetTitle("#New/disappeared noisy pixels");
   ax->SetTitleOffset(1.5);
   ax->SetTitleFont(tfont);
@@ -291,7 +311,7 @@ void noisy_pix_trend (std::vector<noise>* noise_runs, std::string plot_opt,
   ax->Draw();
   // legend
   TLegend* l = new TLegend(0.15, 0.83, 0.45, 0.97);
-  l->AddEntry(gr_trend_total, Form("total + fit: #it{f}(#it{x}) = %.1e + %.1e #it{x} ", f_total->GetParameter(0), f_total->GetParameter(1)), "LP");
+  l->AddEntry(gr_trend_total, Form("total + fit: #it{f}(#it{x}) = %.2e + %.2e #it{x} ", f_total->GetParameter(0), f_total->GetParameter(1)), "LP");
   l->AddEntry(gr_trend_new, "new", "P");
   l->AddEntry(gr_trend_disapp, "disappeared", "P");
   l->AddEntry((TObject*)0, Form("#runs: %i", gr_trend_total->GetN()), "");
@@ -302,6 +322,7 @@ void noisy_pix_trend (std::vector<noise>* noise_runs, std::string plot_opt,
   c->Print(Form("%strend_ready(%.0f-%.0f)_sb(%.0f-%.0f).pdf", 
     folder.data(), std::get<2>(delays), std::get<3>(delays), std::get<0>(delays), std::get<1>(delays)));
 
+  first_execution = false;
   return;
 }
 
@@ -316,8 +337,8 @@ void noisy_pixels_plots (long start_min, long start_max)
   }
 
   std::string folder = Form("%s_%s/",
-    timestamp_to_str(std::get<0>(noise_runs->front().timestamps), "%d.%m.%y").data(),
-    timestamp_to_str(std::get<0>(noise_runs->back().timestamps), "%d.%m.%y").data()
+    timestamp_to_str(std::get<0>(noise_runs->front().timestamps), "%y.%m.%d").data(),
+    timestamp_to_str(std::get<0>(noise_runs->back().timestamps), "%y.%m.%d").data()
   );
 
   gSystem->Exec(Form("mkdir -p %s/", folder.data()));
@@ -326,10 +347,10 @@ void noisy_pixels_plots (long start_min, long start_max)
   if (true) {
     // time since last SB stop: min, max [minutes]
     // time since last GO_READY: min, max [minutes]
-    noisy_pix_trend(noise_runs, "LP", {0, 1e4, 0, 1e4}, {5400, 10400}, folder);
-    noisy_pix_trend(noise_runs, "LP", {0, 50, 0, 1e4}, {5400, 10400}, folder);
-    noisy_pix_trend(noise_runs, "LP", {0, 50, 0, 10}, {5400, 10400}, folder);
-    noisy_pix_trend(noise_runs, "LP", {50, 1e4, 0, 10}, {5400, 10400}, folder);
+    noisy_pix_trend(noise_runs, "LP", {0, 1e4, 0, 1e4}, {5400, 10600, 0, 3400}, folder);
+    noisy_pix_trend(noise_runs, "LP", {0, 50, 0, 1e4}, {5400, 10600, 0, 3400}, folder);
+    noisy_pix_trend(noise_runs, "LP", {0, 50, 0, 10}, {5400, 10600, 0, 3400}, folder);
+    noisy_pix_trend(noise_runs, "LP", {50, 1e4, 0, 10}, {5400, 10600, 0, 3400}, folder);
   }
   
   return;
