@@ -10,4 +10,5 @@
 trg_start_min=1717192800
 trg_start_max=1728424800
 
+#root -q 'count_noisy_pixels.cxx+('$trg_start_min','$trg_start_max')'
 root -q 'noisy_pixels.cxx('$trg_start_min','$trg_start_max')'

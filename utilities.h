@@ -135,3 +135,13 @@ std::vector<noise>* read_csv (string fname, long start_min = 0, long start_max =
     << " #noise runs: " << runs->size() << "\n";
   return runs; 
 }
+
+template<typename T>
+void set_margins (T* c, float t, float r, float b, float l)
+{
+  c->SetTopMargin(t); 
+  c->SetRightMargin(r);
+  c->SetBottomMargin(b);
+  c->SetLeftMargin(l);
+  return;
+}
