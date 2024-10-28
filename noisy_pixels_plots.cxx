@@ -56,8 +56,8 @@ void noisy_pix_correlation_with_delays (std::vector<noise>* noise_runs, std::str
   // axes and ranges
   const int N_2d = 5;
   float ax_5bins[N_2d+1] = {0, 1, 2, 3, 4, 5};
-  float ax_sb_2d[N_2d+1] = {0, 5, 10, 30, 60, 1e4};
-  float ax_re_2d[N_2d+1] = {0, 5, 10, 60, 600, 1e4};
+  float ax_sb_2d[N_2d+1] = {0, 10, 30, 60, 600, 1e5};
+  float ax_re_2d[N_2d+1] = {0, 10, 30, 60, 600, 1e5};
 
   const int N_sb = 8;
   double ax_8bins[N_sb+1] = {0, 1, 2, 3, 4, 5, 6, 7, 8};
@@ -348,10 +348,10 @@ void noisy_pixels_plots (long start_min, long start_max)
   if (true) {
     // time since last SB stop: min, max [minutes]
     // time since last GO_READY: min, max [minutes]
-    noisy_pix_trend(noise_runs, "LP", {0, 1e4, 0, 1e4}, {5400, 10600, 0, 3400}, folder);
-    noisy_pix_trend(noise_runs, "LP", {0, 50, 0, 1e4}, {5400, 10600, 0, 3400}, folder);
-    noisy_pix_trend(noise_runs, "LP", {0, 50, 0, 10}, {5400, 10600, 0, 3400}, folder);
-    noisy_pix_trend(noise_runs, "LP", {50, 1e4, 0, 10}, {5400, 10600, 0, 3400}, folder);
+    noisy_pix_trend(noise_runs, "LP", {0, 1e5, 0, 1e4}, {5400, 10600, 0, 4200}, folder); // all runs
+    noisy_pix_trend(noise_runs, "LP", {0, 30, 30, 1e4}, {5400, 10600, 0, 4200}, folder); // "standard" noise runs only
+    noisy_pix_trend(noise_runs, "LP", {60, 1e5, 0, 30}, {5400, 10600, 0, 4200}, folder); // group 2
+    noisy_pix_trend(noise_runs, "LP", {60, 1e5, 0, 5}, {5400, 10600, 0, 4200}, folder); // group 2 extreme
   }
   
   return;
